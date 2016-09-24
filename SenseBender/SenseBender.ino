@@ -143,7 +143,7 @@ void setup() {
   digitalWrite(LED_PIN, LOW);
 
 //  Serial.begin(115200);
-  Serial.begin(57600);
+  Serial.begin(MY_BAUD_RATE);
   Serial.print(F("Ikke's Sensebender Micro FW "));
   Serial.print(RELEASE);
   Serial.flush();
