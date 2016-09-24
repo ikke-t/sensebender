@@ -43,17 +43,20 @@
  */
 
 // Enable debug prints to serial monitor
-//#define MY_DEBUG 
+#define MY_DEBUG
+#define MY_SPECIAL_DEBUG
 
+  
 // Define a static node address, remove if you want auto address assignment
-//#deine MY_NODE_ID 3
+#define MY_NODE_ID 8
+#define MY_BAUD_RATE 57600
 
 // Enable and select radio type attached
 #define MY_RADIO_NRF24
 //#define MY_RADIO_RFM69
 
 // Enable to support OTA for this node (needs DualOptiBoot boot-loader to fully work)
-#define MY_OTA_FIRMWARE_FEATURE
+//#define MY_OTA_FIRMWARE_FEATURE
 
 #include <SPI.h>
 #include <MySensors.h>
@@ -63,13 +66,13 @@
 #include "drivers/SPIFlash/SPIFlash.cpp"
 #endif
 #include <EEPROM.h>  
-#include <sha204_lib_return_codes.h>
+//#include <sha204_lib_return_codes.h>
 #include <sha204_library.h>
 #include <RunningAverage.h>
 //#include <avr/power.h>
 
 // Uncomment the line below, to transmit battery voltage as a normal sensor value
-//#define BATT_SENSOR    199
+#define BATT_SENSOR    199
 
 #define RELEASE "1.4"
 
@@ -80,7 +83,7 @@
 #define CHILD_ID_HUM   2
 
 // How many milli seconds between each measurement
-#define MEASURE_INTERVAL 60000
+#define MEASURE_INTERVAL 5000
 
 // How many milli seconds should we wait for OTA?
 #define OTA_WAIT_PERIOD 300
@@ -139,8 +142,9 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  Serial.begin(115200);
-  Serial.print(F("Sensebender Micro FW "));
+//  Serial.begin(115200);
+  Serial.begin(57600);
+  Serial.print(F("Ikke's Sensebender Micro FW "));
   Serial.print(RELEASE);
   Serial.flush();
 
@@ -224,7 +228,7 @@ void loop() {
       wait(OTA_WAIT_PERIOD);
   }
 #endif
-
+  Serial.println("Ikke moi.");
   sleep(MEASURE_INTERVAL);  
 }
 
