@@ -43,17 +43,20 @@
  */
 
 // Enable debug prints to serial monitor
-#define MY_DEBUG
-#define MY_SPECIAL_DEBUG
+//#define MY_DEBUG
+//#define MY_SPECIAL_DEBUG
 
+// use bouncer to get rid of the ripple while changing value?
+//#define USE_BOUNCER
   
 // Define a static node address, remove if you want auto address assignment
-#define MY_NODE_ID 8
+//#define MY_NODE_ID 8
+// set node id to auto, gateway will autoassign them
+#define MY_NODE_ID AUTO
 #define MY_BAUD_RATE 57600
 
 // Enable and select radio type attached
 #define MY_RADIO_NRF24
-//#define MY_RADIO_RFM69
 
 // Enable to support OTA for this node (needs DualOptiBoot boot-loader to fully work)
 //#define MY_OTA_FIRMWARE_FEATURE
@@ -65,11 +68,14 @@
 #ifndef MY_OTA_FIRMWARE_FEATURE
 #include "drivers/SPIFlash/SPIFlash.cpp"
 #endif
-#include <EEPROM.h>  
+#include <EEPROM.h>
 //#include <sha204_lib_return_codes.h>
 #include <sha204_library.h>
 #include <RunningAverage.h>
 //#include <avr/power.h>
+#ifdef USE_BOUNCER
+#include <Bounce2.h>
+#endif
 
 // Uncomment the line below, to transmit battery voltage as a normal sensor value
 #define BATT_SENSOR    199
@@ -79,11 +85,13 @@
 #define AVERAGES 2
 
 // Child sensor ID's
-#define CHILD_ID_TEMP  1
-#define CHILD_ID_HUM   2
+#define CHILD_ID_TEMP   1
+#define CHILD_ID_HUM    2
+#define CHILD_ID_DOOR   3
+#define CHILD_ID_MOTION 4
 
 // How many milli seconds between each measurement
-#define MEASURE_INTERVAL 5000
+#define MEASURE_INTERVAL 60000
 
 // How many milli seconds should we wait for OTA?
 #define OTA_WAIT_PERIOD 300
@@ -103,6 +111,8 @@
 #define TEST_PIN       A0
 #define LED_PIN        A2
 #define ATSHA204_PIN   17 // A3
+#define DOOR_PIN       3
+#define MOTION_PIN     4
 
 const int sha204Pin = ATSHA204_PIN;
 atsha204Class sha204(sha204Pin);
@@ -113,6 +123,8 @@ SPIFlash flash(8, 0x1F65);
 // Sensor messages
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
+MyMessage msgDoor(CHILD_ID_DOOR, V_TRIPPED);
+MyMessage msgMotion(CHILD_ID_MOTION, V_TRIPPED);
 
 #ifdef BATT_SENSOR
 MyMessage msgBatt(BATT_SENSOR, V_VOLTAGE);
@@ -124,11 +136,16 @@ int sendBattery = 0;
 boolean isMetric = true;
 boolean highfreq = true;
 boolean transmission_occured = false;
+#ifdef USE_BOUNCER
+  Bounce debouncer = Bounce();
+#endif
 
 // Storage of old measurements
 float lastTemperature = -100;
 int lastHumidity = -100;
 long lastBattery = -100;
+int old_door_val = -1;
+bool old_motion_val = false;
 
 RunningAverage raHum(AVERAGES);
 
@@ -142,9 +159,8 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-//  Serial.begin(115200);
   Serial.begin(MY_BAUD_RATE);
-  Serial.print(F("Ikke's Sensebender Micro FW "));
+  Serial.print(F("Ikke's Sensebender Micro alarm unit"));
   Serial.print(RELEASE);
   Serial.flush();
 
@@ -160,7 +176,7 @@ void setup() {
   
   digitalWrite(TEST_PIN,LOW);
   
-  digitalWrite(LED_PIN, HIGH); 
+  digitalWrite(LED_PIN, HIGH);
 
   humiditySensor.begin();
 
@@ -179,6 +195,22 @@ void setup() {
   Serial.println("OTA FW update enabled");
 #endif
 
+  // Setup the door
+  pinMode(DOOR_PIN, INPUT);
+  // Activate internal pull-up
+  digitalWrite(DOOR_PIN, HIGH);
+
+#ifdef USE_BOUNCER
+  // After setting up the door sensor, setup debouncer
+  debouncer.attach(DOOR_PIN);
+  debouncer.interval(5);
+#endif
+
+  // Setup the motion
+  pinMode(MOTION_PIN, INPUT);
+  // Activate internal pull-down
+  digitalWrite(MOTION_PIN, LOW);
+
 }
 
 void presentation()  {
@@ -186,7 +218,9 @@ void presentation()  {
 
   present(CHILD_ID_TEMP,S_TEMP);
   present(CHILD_ID_HUM,S_HUM);
-    
+  present(CHILD_ID_DOOR, S_DOOR);
+  present(CHILD_ID_MOTION, S_MOTION);
+
 #ifdef BATT_SENSOR
   present(BATT_SENSOR, S_POWER);
 #endif
@@ -200,6 +234,7 @@ void presentation()  {
  ***********************************************/
 void loop() {
   
+  bool motion;
   measureCount ++;
   sendBattery ++;
   bool forceTransmit = false;
@@ -213,7 +248,7 @@ void loop() {
 #endif
   
   if (measureCount > FORCE_TRANSMIT_INTERVAL) { // force a transmission
-    forceTransmit = true; 
+    forceTransmit = true;
     measureCount = 0;
   }
     
@@ -223,13 +258,44 @@ void loop() {
      sendBattLevel(forceTransmit); // Not needed to send battery info that often
      sendBattery = 0;
   }*/
+
+  // Door sensor
+#ifdef USE_BOUNCER
+  debouncer.update();
+  // Get the update value
+  int door_val = debouncer.read();
+#else
+  int door_val = digitalRead(MOTION_PIN);
+#endif
+
+  if (door_val != old_door_val) {
+     // Send in the new value
+     send(msgDoor.set(door_val==HIGH ? 1 : 0));
+     old_door_val = door_val;
+ }
+
+  // Read digital motion value and check if true
+  motion = digitalRead(MOTION_PIN) == HIGH ? true:false;
+  if (motion != old_motion_val) {
+     // Send in the new value
+     send(msgMotion.set(motion ? 1 : 0));
+     old_motion_val = motion;
+  }
+
 #ifdef MY_OTA_FIRMWARE_FEATURE
   if (transmission_occured) {
       wait(OTA_WAIT_PERIOD);
   }
 #endif
-  Serial.println("Ikke moi.");
-  sleep(MEASURE_INTERVAL);  
+  Serial.print(F("Door  :"));Serial.println(door_val);
+  Serial.print(F("Motion:"));Serial.println(motion);
+
+  // sleep(MEASURE_INTERVAL);
+  // Sleep until interrupt comes in from motion/door sensor.
+  // Send update once in a while.
+  sleep(digitalPinToInterrupt(DOOR_PIN), CHANGE,
+        digitalPinToInterrupt(MOTION_PIN), CHANGE,
+        MEASURE_INTERVAL);
 }
 
 
@@ -253,9 +319,9 @@ void sendTempHumidityMeasurements(bool force)
   float diffHum = abs(lastHumidity - raHum.getAverage());
 
   Serial.print(F("TempDiff :"));Serial.println(diffTemp);
-  Serial.print(F("HumDiff  :"));Serial.println(diffHum); 
+  Serial.print(F("HumDiff  :"));Serial.println(diffHum);
 
-  if (isnan(diffHum)) tx = true; 
+  if (isnan(diffHum)) tx = true;
   if (diffTemp > TEMP_TRANSMIT_THRESHOLD) tx = true;
   if (diffHum > HUMI_TRANSMIT_THRESHOLD) tx = true;
 
@@ -356,7 +422,7 @@ void testMode()
   Serial.println(F(" - TestMode"));
   Serial.println(F("Testing peripherals!"));
   Serial.flush();
-  Serial.print(F("-> SI7021 : ")); 
+  Serial.print(F("-> SI7021 : "));
   Serial.flush();
   
   if (humiditySensor.begin()) 
