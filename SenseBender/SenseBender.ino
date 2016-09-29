@@ -144,7 +144,7 @@ boolean transmission_occured = false;
 float lastTemperature = -100;
 int lastHumidity = -100;
 long lastBattery = -100;
-int old_door_val = -1;
+bool old_door_val = false;
 bool old_motion_val = false;
 
 RunningAverage raHum(AVERAGES);
@@ -238,6 +238,7 @@ void presentation()  {
 void loop() {
   
   bool motion;
+  bool door_val;
   measureCount ++;
   sendBattery ++;
   bool forceTransmit = false;
@@ -266,19 +267,19 @@ void loop() {
 #ifdef USE_BOUNCER
   debouncer.update();
   // Get the update value
-  int door_val = debouncer.read();
+  door_val = debouncer.read() == HIGH ? true : false;
 #else
-  int door_val = digitalRead(DOOR_PIN);
+  door_val = digitalRead(DOOR_PIN) == HIGH ? true : false;
 #endif
 
   if (door_val != old_door_val) {
      // Send in the new value
-     send(msgDoor.set(door_val==HIGH ? 1 : 0));
+     send(msgDoor.set(door_val ? 1 : 0));
      old_door_val = door_val;
  }
 
-  // Read digital motion value and check if true
-  motion = digitalRead(MOTION_PIN) == HIGH ? true:false;
+  // Read digital motion value
+  motion = digitalRead(MOTION_PIN) == HIGH ? true : false;
   if (motion != old_motion_val) {
      // Send in the new value
      send(msgMotion.set(motion ? 1 : 0));
@@ -296,8 +297,8 @@ void loop() {
   // sleep(MEASURE_INTERVAL);
   // Sleep until interrupt comes in from motion/door sensor.
   // Send update once in a while.
-  sleep(digitalPinToInterrupt(DOOR_PIN), CHANGE,
-        digitalPinToInterrupt(MOTION_PIN), CHANGE,
+  sleep(digitalPinToInterrupt(MOTION_PIN), CHANGE,
+        digitalPinToInterrupt(DOOR_PIN), CHANGE,
         MEASURE_INTERVAL);
 }
 
