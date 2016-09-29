@@ -112,7 +112,7 @@
 #define LED_PIN        A2
 #define ATSHA204_PIN   17 // A3
 #define DOOR_PIN       3
-#define MOTION_PIN     4
+#define MOTION_PIN     2
 
 const int sha204Pin = ATSHA204_PIN;
 atsha204Class sha204(sha204Pin);
