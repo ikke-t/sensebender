@@ -198,6 +198,8 @@ void setup() {
   // Setup the door
   pinMode(DOOR_PIN, INPUT);
   // Activate internal pull-up
+  // Door sensor will be open if door is open
+  // so input will get pulled high due pull-up.
   digitalWrite(DOOR_PIN, HIGH);
 
 #ifdef USE_BOUNCER
@@ -207,9 +209,10 @@ void setup() {
 #endif
 
   // Setup the motion
+  // Motion sensor will be high while motion detected.
   pinMode(MOTION_PIN, INPUT);
   // Activate internal pull-down
-  digitalWrite(MOTION_PIN, LOW);
+  // digitalWrite(MOTION_PIN, LOW);
 
 }
 
