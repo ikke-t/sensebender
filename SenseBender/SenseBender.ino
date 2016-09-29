@@ -265,7 +265,7 @@ void loop() {
   // Get the update value
   int door_val = debouncer.read();
 #else
-  int door_val = digitalRead(MOTION_PIN);
+  int door_val = digitalRead(DOOR_PIN);
 #endif
 
   if (door_val != old_door_val) {
