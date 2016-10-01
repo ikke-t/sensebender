@@ -48,6 +48,7 @@
 
 // use bouncer to get rid of the ripple while changing value?
 //#define USE_BOUNCER
+//#define USE_INTERRUPT
   
 // Define a static node address, remove if you want auto address assignment
 //#define MY_NODE_ID 8
@@ -91,7 +92,7 @@
 #define CHILD_ID_MOTION 4
 
 // How many milli seconds between each measurement
-#define MEASURE_INTERVAL 60000
+#define MEASURE_INTERVAL 5000
 
 // How many milli seconds should we wait for OTA?
 #define OTA_WAIT_PERIOD 300
@@ -243,7 +244,8 @@ void loop() {
   sendBattery ++;
   bool forceTransmit = false;
   transmission_occured = false;
-#ifndef MY_OTA_FIRMWARE_FEATURE
+#if 0
+//#ifndef MY_OTA_FIRMWARE_FEATURE
   if ((measureCount == 5) && highfreq) 
   {
     clock_prescale_set(clock_div_8); // Switch to 1Mhz for the reminder of the sketch, save power.
@@ -294,12 +296,15 @@ void loop() {
   Serial.print(F("Door  :"));Serial.println(door_val);
   Serial.print(F("Motion:"));Serial.println(motion);
 
-  // sleep(MEASURE_INTERVAL);
   // Sleep until interrupt comes in from motion/door sensor.
   // Send update once in a while.
+#ifdef USE_INTERRUPT
   sleep(digitalPinToInterrupt(MOTION_PIN), CHANGE,
         digitalPinToInterrupt(DOOR_PIN), CHANGE,
         MEASURE_INTERVAL);
+#else // not using interrupt, but periodic polling
+  sleep(MEASURE_INTERVAL);
+#endif
 }
 
 
