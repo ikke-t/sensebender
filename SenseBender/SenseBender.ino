@@ -48,7 +48,7 @@
 
 // use bouncer to get rid of the ripple while changing value?
 //#define USE_BOUNCER
-//#define USE_INTERRUPT
+#define USE_INTERRUPT
   
 // Define a static node address, remove if you want auto address assignment
 //#define MY_NODE_ID 8
@@ -92,7 +92,7 @@
 #define CHILD_ID_MOTION 4
 
 // How many milli seconds between each measurement
-#define MEASURE_INTERVAL 5000
+#define MEASURE_INTERVAL 60000
 
 // How many milli seconds should we wait for OTA?
 #define OTA_WAIT_PERIOD 300
