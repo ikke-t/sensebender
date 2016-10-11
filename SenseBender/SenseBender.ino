@@ -45,6 +45,7 @@
 // Enable debug prints to serial monitor
 //#define MY_DEBUG
 //#define MY_SPECIAL_DEBUG
+//#define MOTION_SENSOR
 
 // use bouncer to get rid of the ripple while changing value?
 //#define USE_BOUNCER
@@ -89,7 +90,9 @@
 #define CHILD_ID_TEMP   1
 #define CHILD_ID_HUM    2
 #define CHILD_ID_DOOR   3
+#ifdef MOTION_SENSOR
 #define CHILD_ID_MOTION 4
+#endif
 
 // How many milli seconds between each measurement
 #define MEASURE_INTERVAL 60000
@@ -113,7 +116,9 @@
 #define LED_PIN        A2
 #define ATSHA204_PIN   17 // A3
 #define DOOR_PIN       3
+#ifdef MOTION_SENSOR
 #define MOTION_PIN     2
+#endif
 
 const int sha204Pin = ATSHA204_PIN;
 atsha204Class sha204(sha204Pin);
@@ -125,7 +130,9 @@ SPIFlash flash(8, 0x1F65);
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage msgDoor(CHILD_ID_DOOR, V_TRIPPED);
+#ifdef MOTION_SENSOR
 MyMessage msgMotion(CHILD_ID_MOTION, V_TRIPPED);
+#endif
 
 #ifdef BATT_SENSOR
 MyMessage msgBatt(BATT_SENSOR, V_VOLTAGE);
@@ -146,7 +153,9 @@ float lastTemperature = -100;
 int lastHumidity = -100;
 long lastBattery = -100;
 bool old_door_val = false;
+#ifdef MOTION_SENSOR
 bool old_motion_val = false;
+#endif
 
 RunningAverage raHum(AVERAGES);
 
@@ -209,12 +218,11 @@ void setup() {
   debouncer.interval(5);
 #endif
 
+#ifdef MOTION_SENSOR
   // Setup the motion
   // Motion sensor will be high while motion detected.
   pinMode(MOTION_PIN, INPUT);
-  // Activate internal pull-down
-  // digitalWrite(MOTION_PIN, LOW);
-
+#endif
 }
 
 void presentation()  {
@@ -223,7 +231,9 @@ void presentation()  {
   present(CHILD_ID_TEMP,S_TEMP);
   present(CHILD_ID_HUM,S_HUM);
   present(CHILD_ID_DOOR, S_DOOR);
+#ifdef MOTION_SENSOR
   present(CHILD_ID_MOTION, S_MOTION);
+#endif
 
 #ifdef BATT_SENSOR
   present(BATT_SENSOR, S_POWER);
@@ -238,7 +248,9 @@ void presentation()  {
  ***********************************************/
 void loop() {
   
+#ifdef MOTION_SENSOR
   bool motion;
+#endif
   bool door_val;
   measureCount ++;
   sendBattery ++;
@@ -280,6 +292,7 @@ void loop() {
      old_door_val = door_val;
  }
 
+#ifdef MOTION_SENSOR
   // Read digital motion value
   motion = digitalRead(MOTION_PIN) == HIGH ? true : false;
   if (motion != old_motion_val) {
@@ -287,6 +300,7 @@ void loop() {
      send(msgMotion.set(motion ? 1 : 0));
      old_motion_val = motion;
   }
+#endif
 
 #ifdef MY_OTA_FIRMWARE_FEATURE
   if (transmission_occured) {
@@ -294,13 +308,17 @@ void loop() {
   }
 #endif
   Serial.print(F("Door  :"));Serial.println(door_val);
+#ifdef MOTION_SENSOR
   Serial.print(F("Motion:"));Serial.println(motion);
+#endif
 
   // Sleep until interrupt comes in from motion/door sensor.
   // Send update once in a while.
 #ifdef USE_INTERRUPT
-  sleep(digitalPinToInterrupt(MOTION_PIN), CHANGE,
-        digitalPinToInterrupt(DOOR_PIN), CHANGE,
+  sleep(digitalPinToInterrupt(DOOR_PIN), CHANGE,
+#ifdef MOTION_SENSOR
+        digitalPinToInterrupt(MOTION_PIN), CHANGE,
+#endif
         MEASURE_INTERVAL);
 #else // not using interrupt, but periodic polling
   sleep(MEASURE_INTERVAL);
