@@ -78,8 +78,8 @@ void loop()
   boolean door = digitalRead(DOOR_PIN) == HIGH;
   boolean motion = digitalRead(MOTION_PIN) == HIGH;
 
-  Serial.println(door);
-  Serial.println(motion);
+  Serial.print(F("Door  :"));Serial.println(door);
+  Serial.print(F("Motion:"));Serial.println(motion);
 
   if (door != door_prev) {
     send(msg_door.set(door?"1":"0"));
