@@ -91,6 +91,6 @@ void loop()
   }
 
   // Sleep until interrupt comes in on motion sensor. Send update every two minute.
-  sleep(digitalPinToInterrupt(DOOR_PIN), CHANGE, SLEEP_TIME,
+  sleep(digitalPinToInterrupt(DOOR_PIN), CHANGE,
         digitalPinToInterrupt(MOTION_PIN), CHANGE, SLEEP_TIME);
 }
