@@ -33,15 +33,19 @@
 // Enable and select radio type attached
 #define MY_RADIO_NRF24
 #define MY_BAUD_RATE 57600
-#define MY_NODE_ID AUTO
+//#define MY_NODE_ID AUTO
+#define MY_NODE_ID 3
 
 #include <SPI.h>
 #include <MySensors.h>
 
-unsigned long SLEEP_TIME = 5000; // Sleep time between reports (in milliseconds)
+unsigned long SLEEP_TIME = 5*60*1000; // Sleep time between reports (in milliseconds)
 // Digital input pin for door sensor. Will be high if door open. Used for interrupt.
 #define DOOR_PIN 2
 #define MOTION_PIN 3
+
+// whether to send only changed values, or always send changes after sleep perioid
+// #define SEND_ONLY_CHANGES
 
 // Ids of the sensor children
 #define DOOR_ID 2
@@ -69,8 +73,10 @@ void presentation()  {
   present(MOTION_ID, S_MOTION);
 }
 
+#ifdef SEND_ONLY_CHANGES
 bool door_prev = false;
 bool motion_prev = false;
+#endif
 
 void loop()
 {
@@ -81,15 +87,20 @@ void loop()
   Serial.print(F("Door  :"));Serial.println(door);
   Serial.print(F("Motion:"));Serial.println(motion);
 
+#ifdef SEND_ONLY_CHANGES
   if (door != door_prev) {
+#endif
     send(msg_door.set(door?"1":"0"));
+#ifdef SEND_ONLY_CHANGES
     door_prev = door;
   }
   if (motion != motion_prev) {
+#endif
     send(msg_motion.set(motion?"1":"0"));
+#ifdef SEND_ONLY_CHANGES
     motion_prev = motion;
   }
-
+#endif
   // Sleep until interrupt comes in on motion sensor. Send update every two minute.
   sleep(digitalPinToInterrupt(DOOR_PIN), CHANGE,
         digitalPinToInterrupt(MOTION_PIN), CHANGE, SLEEP_TIME);
